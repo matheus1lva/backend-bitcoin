@@ -7,6 +7,8 @@ export const userTable = pgTable('user', {
   password: text().notNull(),
   btcReceiveAddress: text().notNull(),
   btcKey: text().notNull(),
+  plaidAccessToken: text(),
+  plaidItemId: text(),
   createdAt: text().notNull(),
   updatedAt: text().notNull(),
 });

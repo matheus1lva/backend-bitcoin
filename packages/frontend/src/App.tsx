@@ -33,9 +33,9 @@ function App() {
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <Routes>
-            <Route path="/signup" element={<SignUpForm />} />
+            <Route path="/" element={<SignUpForm />} />
             <Route
-              path="/"
+              path="/home"
               element={
                 <div>
                   <div>
