@@ -1,11 +1,8 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { userTable } from 'src/drizzle/schemas';
-import { Database } from 'src/drizzle/types';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
+import bitcoin from 'bitcoin-address-generator';
+import { db } from '../../config/database';
+import { userTable } from '../../schema';
 import { eq } from 'drizzle-orm';
-import * as bitcoin from 'bitcoin-address-generator';
-import { CreatePlaidTokenDto } from 'src/user/dto/create-plaid-token.dto';
 import {
   Configuration,
   CountryCode,
@@ -14,20 +11,15 @@ import {
   Products,
 } from 'plaid';
 
-@Injectable()
 export class UserService {
-  plaidClient: PlaidApi;
-  constructor(
-    @Inject(DrizzleAsyncProvider)
-    private db: Database,
-  ) {
+  constructor() {
     this.plaidClient = new PlaidApi(
       new Configuration({
         basePath: PlaidEnvironments['sandbox'],
         baseOptions: {
           headers: {
-            'PLAID-CLIENT-ID': '6769e47b491dca001bd2e3ca',
-            'PLAID-SECRET': 'b81560ada267af4596b26459a4aed9',
+            'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
+            'PLAID-SECRET': process.env.PLAID_SECRET,
             'Plaid-Version': '2020-09-14',
           },
         },
@@ -40,35 +32,40 @@ export class UserService {
       bitcoin.createWalletAddress((response) => {
         resolve(response);
       });
-    }) as Promise<{ key: string; address: string }>;
+    });
   }
-  async signup(data: { name: string; email: string; password: string }) {
-    const now = new Date().toISOString();
+
+  async signup(data) {
+    // Validate required fields
+    if (!data.name || !data.email || !data.password) {
+      throw new Error('Missing required fields');
+    }
+
+    const now = new Date();
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const addresses = await this.generateBitcoinAddress();
 
-    const user = await this.db
-      .insert(userTable)
-      .values({
-        ...data,
-        password: hashedPassword,
-        btcReceiveAddress: addresses.address,
-        btcKey: addresses.key,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    if (!addresses || !addresses.address || !addresses.key) {
+      throw new Error('Failed to generate Bitcoin address');
+    }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const insertData = {
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      createdAt: now,
+      updatedAt: now,
+      btcReceiveAddress: addresses.address,
+      btcKey: addresses.key,
+    };
+
+    const user = await db.insert(userTable).values(insertData).returning();
+
     const { password, ...userWithoutPassword } = user[0];
     return userWithoutPassword;
   }
 
-  async login(data: { email: string; password: string }) {
-    const user = await this.db.query.userTable.findFirst({
-      where: eq(userTable.email, data.email),
-    });
-
+  async login(data) {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -84,7 +81,7 @@ export class UserService {
     return userWithoutPassword;
   }
 
-  async createPlaidToken(data: CreatePlaidTokenDto) {
+  async createPlaidToken(data) {
     const userId = data.userId;
     const request = {
       user: {
@@ -104,9 +101,9 @@ export class UserService {
       console.error(err);
     }
   }
-  async exchangePublicToken(data: any) {
+  async exchangePublicToken(data) {
     const publicToken = data.public_token;
-    const userId = data.userId; // Make sure to pass userId from the frontend
+    const userId = data.userId;
 
     try {
       const response = await this.plaidClient.itemPublicTokenExchange({
@@ -116,10 +113,9 @@ export class UserService {
       const accessToken = response.data.access_token;
       const itemID = response.data.item_id;
 
-      await this.db
+      await db
         .update(userTable)
         .set({
-          // @ts-expect-error it has an error
           plaidAccessToken: accessToken,
           plaidItemId: itemID,
         })

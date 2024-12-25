@@ -1,11 +1,11 @@
 import * as dotenv from 'dotenv';
-import { type NodePgDatabase, drizzle } from 'drizzle-orm/node-postgres';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import path from 'path';
 import pg from 'pg';
 import { exit } from 'process';
 
-import * as allSchema from './schemas';
+import * as allSchema from '../src/schema';
 
 dotenv.config();
 
@@ -13,14 +13,14 @@ dotenv.config();
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
   });
-  let db: NodePgDatabase<typeof allSchema> | null = null;
+  let db = null;
   db = drizzle(pool, {
     schema: {
       ...allSchema,
     },
   });
 
-  const migrationPath = path.join(process.cwd(), 'src/drizzle/migrations');
+  const migrationPath = path.join(process.cwd(), 'drizzle/migrations');
 
   await migrate(db, { migrationsFolder: migrationPath });
 

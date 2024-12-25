@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import axios from 'axios';
 import { useForm } from "react-hook-form";
@@ -21,10 +21,8 @@ const formSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 })
 
-type SignUpFormData = z.infer<typeof formSchema>
-
-const SignUpForm: React.FC = () => {
-  const form = useForm<SignUpFormData>({
+const SignUpForm = () => {
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
@@ -32,12 +30,12 @@ const SignUpForm: React.FC = () => {
       name: "",
     },
   })
-  const [linkToken, setLinkToken] = React.useState<string | null>(null);
-  const [bitcoinAddress, setBitcoinAddress] = React.useState<string | null>(null);
-  const [userData, setUserData] = React.useState<any | null>(null);
+  const [linkToken, setLinkToken] = useState(null);
+  const [bitcoinAddress, setBitcoinAddress] = useState(null);
+  const [userData, setUserData] = useState(null);
 
   const { open, ready } = usePlaidLink({
-    token: linkToken!,
+    token: linkToken,
     onSuccess: async (public_token) => {
       try {
         const response = await axios.post('http://localhost:3000/v1/users/exchange-public-token', { userId: userData.id, public_token });
@@ -51,7 +49,7 @@ const SignUpForm: React.FC = () => {
     },
   });
 
-  const onSubmit = async (data: SignUpFormData) => {
+  const onSubmit = async (data) => {
     try {
       const response = await axios.post('http://localhost:3000/v1/users/signup', data);
       
