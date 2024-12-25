@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { userRouter } from './modules/users/user.routes';
+import { passKeyRouter } from './modules/passkey/pass-key.routes';
 
 const app = express();
 
@@ -18,6 +19,7 @@ const v1Router = express.Router();
 app.use('/v1', v1Router);
 
 v1Router.use('/users', userRouter);
+v1Router.use('/passkey', passKeyRouter);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
