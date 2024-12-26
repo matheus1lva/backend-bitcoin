@@ -1,13 +1,13 @@
-const {
+import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
-} = require('@simplewebauthn/server');
-const { db } = require('../../db');
-const { eq } = require('drizzle-orm');
-const { authenticators } = require('./schemas/schema');
-const { users } = require('../user/schema');
+} from '@simplewebauthn/server';
+import { db } from '../../config/database';
+import { eq } from 'drizzle-orm';
+import { authenticators } from '../../schema/authenticator.schema';
+import { userTable } from '../../schema';
 
 const rpName = 'Your App Name';
 const rpID = process.env.RPID || 'localhost';
@@ -75,8 +75,8 @@ class PasskeyService {
   static async generateAuthenticationOptions(username) {
     const user = await db
       .select()
-      .from(users)
-      .where(eq(users.username, username))
+      .from(userTable)
+      .where(eq(userTable.username, username))
       .limit(1);
     if (!user[0]) {
       throw new Error('User not found');
@@ -146,4 +146,4 @@ class PasskeyService {
   }
 }
 
-module.exports = { PasskeyService };
+export { PasskeyService };

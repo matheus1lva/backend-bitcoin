@@ -10,6 +10,7 @@ import {
   PlaidEnvironments,
   Products,
 } from 'plaid';
+import jwt from 'jsonwebtoken';
 
 export class UserService {
   constructor() {
@@ -65,20 +66,32 @@ export class UserService {
     return userWithoutPassword;
   }
 
-  async login(data) {
-    if (!user) {
+  async login(email, inputPassword) {
+    const user = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.email, email))
+      .limit(1);
+
+    if (!user[0]) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(data.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      inputPassword,
+      user[0].password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    const { password, ...userWithoutPassword } = user[0];
+    const token = jwt.sign(userWithoutPassword, process.env.JWT_SECRET, {
+      expiresIn: '1d',
+    });
+
+    return { user: userWithoutPassword, token };
   }
 
   async createPlaidToken(data) {
@@ -95,7 +108,6 @@ export class UserService {
 
     try {
       const response = await this.plaidClient.linkTokenCreate(request);
-      console.log(response);
       return response.data;
     } catch (err) {
       console.error(err);

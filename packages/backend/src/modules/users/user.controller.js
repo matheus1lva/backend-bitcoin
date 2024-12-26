@@ -28,27 +28,29 @@ class UserController {
       if (error.message === 'Invalid credentials') {
         return res.status(401).json({ message: error.message });
       }
+      console.log(error);
       res.status(500).json({ message: 'Error logging in' });
     }
   };
 
-  async createPlaidToken(req, res) {
+  createPlaidToken = async (req, res) => {
     try {
       const token = await this.userService.createPlaidToken(req.body);
-      res.json(token)
-    }catch(err) {
-      res.status(500).json({ message: 'failed to create token'})
+      res.json(token);
+    } catch (err) {
+      res.status(500).json({ message: 'failed to create token' });
     }
-  }
+  };
 
-  async exchangePublicToken(req, res) {
+  exchangePublicToken = async (req, res) => {
     try {
-      const exchange = await this.userService.exchangePublicToken(data);
-      res.json(exchange)
-    }catch(err) {
-      res.status(500).json({ message: 'failed to create token'})
+      const exchange = await this.userService.exchangePublicToken(req.body);
+      res.json(exchange);
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: 'failed to create token' });
     }
-  }
+  };
 }
 
-module.exports = { UserController }; 
+module.exports = { UserController };

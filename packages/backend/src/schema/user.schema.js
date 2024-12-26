@@ -9,6 +9,6 @@ export const userTable = pgTable('user', {
   btcKey: text('btcKey').notNull(),
   plaidAccessToken: text('plaidAccessToken'),
   plaidItemId: text('plaidItemId'),
-  createdAt: timestamp('createdAt').notNull(),
-  updatedAt: timestamp('updatedAt').notNull(),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow(),
 });

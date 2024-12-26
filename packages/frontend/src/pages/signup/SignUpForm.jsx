@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { usePlaidLink } from 'react-plaid-link';
-import axios from 'axios';
+import React, { useState } from "react";
+import { usePlaidLink } from "react-plaid-link";
+import axios from "axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,7 +19,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-})
+});
 
 const SignUpForm = () => {
   const form = useForm({
@@ -29,49 +29,55 @@ const SignUpForm = () => {
       password: "",
       name: "",
     },
-  })
+  });
   const [linkToken, setLinkToken] = useState(null);
   const [bitcoinAddress, setBitcoinAddress] = useState(null);
   const [userData, setUserData] = useState(null);
 
   const { open, ready } = usePlaidLink({
     token: linkToken,
-    onSuccess: async (public_token) => {
+    onSuccess: async public_token => {
       try {
-        const response = await axios.post('http://localhost:3000/v1/users/exchange-public-token', { userId: userData.id, public_token });
+        const response = await axios.post(
+          "http://localhost:3000/v1/users/exchange-public-token",
+          { userId: userData.id, public_token }
+        );
         setBitcoinAddress(response.data.bitcoinAddress);
       } catch (error) {
-        console.error('Error completing signup:', error);
+        console.error("Error completing signup:", error);
       }
     },
     onExit: () => {
-      console.log('User exited Plaid Link');
+      console.log("User exited Plaid Link");
     },
   });
 
-  const onSubmit = async (data) => {
+  const onSubmit = async data => {
     try {
-      const response = await axios.post('http://localhost:3000/v1/users/signup', data);
-      
+      const response = await axios.post(
+        "http://localhost:3000/v1/users/signup",
+        data
+      );
+
       if (response.data) {
-        const responseLink = await axios.post('http://localhost:3000/v1/users/create-plaid-token', { userId: response.data.id });
+        const responseLink = await axios.post(
+          "http://localhost:3000/v1/users/create-plaid-token",
+          { userId: response.data.id }
+        );
         setLinkToken(responseLink.data.link_token);
         setUserData(response.data);
       }
     } catch (error) {
-      console.error('Error during signup:', error);
+      console.error("Error during signup:", error);
     }
   };
 
-
-  if(userData?.id) {
+  if (userData?.id) {
     return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
-      <Button onClick={() => open()}>
-        Link bank account to plaid
-      </Button>
+      <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg">
+        <Button onClick={() => open()}>Link bank account to plaid</Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -133,7 +139,9 @@ const SignUpForm = () => {
 
       {bitcoinAddress && (
         <div className="mt-4 p-4 bg-green-50 rounded-lg">
-          <p className="text-green-800">Your Bitcoin address: {bitcoinAddress}</p>
+          <p className="text-green-800">
+            Your Bitcoin address: {bitcoinAddress}
+          </p>
         </div>
       )}
     </div>
