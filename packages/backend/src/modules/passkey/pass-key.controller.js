@@ -1,6 +1,6 @@
-const { PasskeyService } = require('./pass-key.service');
+import { PasskeyService } from './pass-key.service';
 
-class PasskeyController {
+export class PasskeyController {
   static async generateRegistrationOptions(req, res) {
     try {
       const { userId, username } = req.body;
@@ -88,5 +88,3 @@ class PasskeyController {
     }
   }
 }
-
-module.exports = { PasskeyController };

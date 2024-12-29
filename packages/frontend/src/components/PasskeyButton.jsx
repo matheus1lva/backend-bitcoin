@@ -3,8 +3,7 @@ import { usePasskey } from "../hooks/usePasskey";
 import { useState } from "react";
 
 export function PasskeyButton({ mode, userId, username, onSuccess, onError }) {
-  const { registerPasskey, authenticateWithPasskey, loading, error } =
-    usePasskey();
+  const { registerPasskey, authenticateWithPasskey, loading } = usePasskey();
   const [isSupported] = useState(() => {
     return window.PublicKeyCredential !== undefined;
   });

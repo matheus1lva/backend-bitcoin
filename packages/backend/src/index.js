@@ -5,11 +5,11 @@ import { userRouter } from './modules/users/user.routes.js';
 import { passKeyRouter } from './modules/passkey/pass-key.routes.js';
 import { bitcoinRouter } from './modules/bitcoin/bitcoin.routes.js';
 import { plaidRouter } from './modules/plaid/plaid.routes.js';
-import { loggerMiddleware } from './middleware/logger.middleware.js';
 import {
   jsonParserMiddleware,
   urlencodedMiddleware,
-} from './middleware/native.middleware.js';
+  loggerMiddleware,
+} from './middleware';
 
 const app = express();
 
@@ -20,9 +20,9 @@ app.use(
   }),
 );
 
+app.use(loggerMiddleware);
 app.use(jsonParserMiddleware);
 app.use(urlencodedMiddleware);
-app.use(loggerMiddleware);
 
 const v1Router = express.Router();
 app.use('/v1', v1Router);

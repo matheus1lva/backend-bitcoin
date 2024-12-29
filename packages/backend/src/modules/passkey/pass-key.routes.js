@@ -1,58 +1,34 @@
-const { Router } = require('express');
-const { PasskeyController } = require('./pass-key.controller');
-const { validateRequest } = require('zod-express-middleware');
-const { z } = require('zod');
+import { Router } from 'express';
+import { PasskeyController } from './pass-key.controller';
+import { validateRequest } from 'zod-express-middleware';
 
-const router = Router();
+import registrationSchema from './dto/registration.dto.js';
+import verifyRegistrationSchema from './dto/verify-registration.dto.js';
+import authenticationSchema from './dto/authentication.dto.js';
+import verifyAuthenticationSchema from './dto/verify-authentication.dto.js';
 
-const registrationSchema = z.object({
-  body: z.object({
-    userId: z.string().uuid(),
-    username: z.string(),
-  }),
-});
+export const passKeyRouter = Router();
 
-const verifyRegistrationSchema = z.object({
-  body: z.object({
-    userId: z.string().uuid(),
-    credential: z.any(),
-  }),
-});
-
-const authenticationSchema = z.object({
-  body: z.object({
-    username: z.string(),
-  }),
-});
-
-const verifyAuthenticationSchema = z.object({
-  body: z.object({
-    credential: z.any(),
-  }),
-});
-
-router.post(
+passKeyRouter.post(
   '/register/options',
   validateRequest(registrationSchema),
   PasskeyController.generateRegistrationOptions,
 );
 
-router.post(
+passKeyRouter.post(
   '/register/verify',
   validateRequest(verifyRegistrationSchema),
   PasskeyController.verifyRegistration,
 );
 
-router.post(
+passKeyRouter.post(
   '/authenticate/options',
   validateRequest(authenticationSchema),
   PasskeyController.generateAuthenticationOptions,
 );
 
-router.post(
+passKeyRouter.post(
   '/authenticate/verify',
   validateRequest(verifyAuthenticationSchema),
   PasskeyController.verifyAuthentication,
 );
-
-module.exports = { passKeyRouter: router };

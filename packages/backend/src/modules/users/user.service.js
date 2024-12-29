@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import * as bitcoin from 'bitcoinjs-lib';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
-const ecc = require('tiny-secp256k1');
-const { ECPairFactory } = require('ecpair');
+import * as ecc from 'tiny-secp256k1';
+import { ECPairFactory } from 'ecpair';
 const ECPair = ECPairFactory(ecc);
 export class UserService {
   constructor(userRepository, jwtService) {
