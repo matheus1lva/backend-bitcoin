@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { usePlaidLink } from "react-plaid-link";
-import axios from "axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,6 +13,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { exchangePublicToken, signup } from "../../services/user.service";
+import { createPlaidToken } from "../../services/plaid.service";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -31,39 +32,26 @@ const SignUpForm = () => {
     },
   });
   const [linkToken, setLinkToken] = useState(null);
-  const [bitcoinAddress, setBitcoinAddress] = useState(null);
   const [userData, setUserData] = useState(null);
 
   const { open, ready } = usePlaidLink({
     token: linkToken,
     onSuccess: async public_token => {
       try {
-        const response = await axios.post(
-          "http://localhost:3001/v1/users/exchange-public-token",
-          { userId: userData.id, public_token }
-        );
-        setBitcoinAddress(response.data.bitcoinAddress);
+        await exchangePublicToken(userData.id, public_token);
       } catch (error) {
         console.error("Error completing signup:", error);
       }
     },
-    onExit: () => {
-      console.log("User exited Plaid Link");
-    },
+    onExit: () => {},
   });
 
   const onSubmit = async data => {
     try {
-      const response = await axios.post(
-        "http://localhost:3001/v1/users/signup",
-        data
-      );
+      const response = await signup(data);
 
       if (response.data) {
-        const responseLink = await axios.post(
-          "http://localhost:3001/v1/users/create-plaid-token",
-          { userId: response.data.id }
-        );
+        const responseLink = await createPlaidToken(response.data.id);
         setLinkToken(responseLink.data.link_token);
         setUserData(response.data);
       }
@@ -136,14 +124,6 @@ const SignUpForm = () => {
           </Button>
         </form>
       </Form>
-
-      {bitcoinAddress && (
-        <div className="mt-4 p-4 bg-green-50 rounded-lg">
-          <p className="text-green-800">
-            Your Bitcoin address: {bitcoinAddress}
-          </p>
-        </div>
-      )}
     </div>
   );
 };

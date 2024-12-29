@@ -1,12 +1,12 @@
 import bcrypt from 'bcrypt';
 import * as bitcoin from 'bitcoinjs-lib';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
-import jwt from 'jsonwebtoken';
 const ecc = require('tiny-secp256k1');
 const { ECPairFactory } = require('ecpair');
 const ECPair = ECPairFactory(ecc);
 export class UserService {
-  constructor(userRepository) {
+  constructor(userRepository, jwtService) {
+    this.jwtService = jwtService;
     this.userRepository = userRepository;
     this.plaidClient = new PlaidApi(
       new Configuration({
@@ -65,29 +65,28 @@ export class UserService {
     }
 
     const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return {
+      user: userWithoutPassword,
+      token: this.jwtService.sign(userWithoutPassword),
+    };
   }
 
   async login(email, inputPassword) {
     const user = await this.userRepository.findByEmail(email);
 
-    if (!user[0]) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!user) {
+      throw new Error('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      inputPassword,
-      user[0].password,
-    );
+    const isPasswordValid = await bcrypt.compare(inputPassword, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new Error('Invalid credentials');
     }
 
-    const { password, ...userWithoutPassword } = user[0];
-    const token = jwt.sign(userWithoutPassword, process.env.JWT_SECRET, {
-      expiresIn: '1d',
-    });
+    const { password, ...userWithoutPassword } = user;
+
+    const token = this.jwtService.sign(userWithoutPassword);
 
     return { user: userWithoutPassword, token };
   }

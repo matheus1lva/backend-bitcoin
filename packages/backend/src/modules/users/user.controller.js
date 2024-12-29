@@ -1,4 +1,5 @@
 import { logger } from '../../utils/logger.js';
+import { JwtService } from '../jwt/jtw.service.js';
 import { PlaidService } from '../plaid/plaid.service.js';
 import { UserService } from './user.service.js';
 import { UsersRepository } from './users.repository.js';
@@ -6,8 +7,10 @@ import { UsersRepository } from './users.repository.js';
 export class UserController {
   constructor() {
     const userRepository = new UsersRepository();
-    this.userService = new UserService(userRepository);
-    this.plaidService = new PlaidService(userRepository);
+    const jwtService = new JwtService();
+    const plaidService = new PlaidService(userRepository);
+    this.userService = new UserService(userRepository, jwtService);
+    this.plaidService = plaidService;
   }
 
   signup = async (req, res) => {
@@ -16,11 +19,11 @@ export class UserController {
       const user = await this.userService.signup({ name, email, password });
       res.status(201).json(user);
     } catch (error) {
+      logger.error(error);
       if (error.message === 'User already exists') {
         return res.status(409).json({ message: error.message });
       }
 
-      logger.error(error);
       res.status(500).json({ message: 'Error creating user' });
     }
   };
@@ -31,10 +34,10 @@ export class UserController {
       const result = await this.userService.login(email, password);
       res.json(result);
     } catch (error) {
+      logger.error(error);
       if (error.message === 'Invalid credentials') {
         return res.status(401).json({ message: error.message });
       }
-      logger.error(error);
       res.status(500).json({ message: 'Error logging in' });
     }
   };
