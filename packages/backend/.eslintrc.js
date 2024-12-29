@@ -7,10 +7,7 @@ module.exports = {
     },
   },
   plugins: ['prettier'],
-  extends: [
-    'eslint:recommended',
-    'plugin:prettier/recommended',
-  ],
+  extends: ['eslint:recommended', 'plugin:prettier/recommended'],
   root: true,
   env: {
     node: true,
@@ -18,5 +15,8 @@ module.exports = {
   ignorePatterns: ['.eslintrc.js'],
   rules: {
     'prettier/prettier': 'error',
+    'no-undef': 'error', // Reports undefined variables
+    'no-unused-vars': 'error', // Reports unused variables
+    'no-unused-imports': 'error', // Reports unused imports
   },
 };

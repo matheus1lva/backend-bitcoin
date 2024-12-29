@@ -1,8 +1,9 @@
 const { UserService } = require('./user.service');
+const { UsersRepository } = require('./users.repository');
 
 class UserController {
   constructor() {
-    this.userService = new UserService();
+    this.userService = new UserService(new UsersRepository());
   }
 
   signup = async (req, res) => {

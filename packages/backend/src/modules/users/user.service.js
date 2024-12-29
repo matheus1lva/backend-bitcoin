@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import bitcoin from 'bitcoin-address-generator';
+import * as bitcoin from 'bitcoinjs-lib';
 import { db } from '../../config/database';
 import { userTable } from '../../schema';
 import { eq } from 'drizzle-orm';
@@ -11,7 +11,9 @@ import {
   Products,
 } from 'plaid';
 import jwt from 'jsonwebtoken';
-
+const ecc = require('tiny-secp256k1');
+const { ECPairFactory } = require('ecpair');
+const ECPair = ECPairFactory(ecc);
 export class UserService {
   constructor() {
     this.plaidClient = new PlaidApi(
@@ -29,11 +31,24 @@ export class UserService {
   }
 
   async generateBitcoinAddress() {
-    return new Promise((resolve) => {
-      bitcoin.createWalletAddress((response) => {
-        resolve(response);
-      });
+    const network = bitcoin.networks.regtest;
+    const keyPair = ECPair.makeRandom({
+      network: network,
     });
+    const { address } = bitcoin.payments.p2wpkh({
+      pubkey: Buffer.from(keyPair.publicKey),
+      network,
+    });
+
+    console.log({
+      address,
+      privateKey: keyPair.toWIF(),
+    });
+
+    return {
+      address,
+      privateKey: keyPair.toWIF(),
+    };
   }
 
   async signup(data) {
@@ -46,10 +61,6 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const addresses = await this.generateBitcoinAddress();
 
-    if (!addresses || !addresses.address || !addresses.key) {
-      throw new Error('Failed to generate Bitcoin address');
-    }
-
     const insertData = {
       name: data.name,
       email: data.email,
@@ -57,7 +68,7 @@ export class UserService {
       createdAt: now,
       updatedAt: now,
       btcReceiveAddress: addresses.address,
-      btcKey: addresses.key,
+      btcKey: addresses.privateKey,
     };
 
     const user = await db.insert(userTable).values(insertData).returning();
@@ -101,7 +112,7 @@ export class UserService {
         client_user_id: userId,
       },
       client_name: 'Btc wallet',
-      products: [Products.Auth],
+      products: [Products.Auth, Products.Transfer],
       language: 'en',
       country_codes: [CountryCode.Us],
     };

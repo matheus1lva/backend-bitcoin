@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  bitcoin:
+    image: ruimarinho/bitcoin-core:latest
+    command:
+      -regtest=1
+      -server=1
+      -rpcuser=bitcoin
+      -rpcpassword=local
+      -rpcallowip=0.0.0.0/0
+      -rpcbind=0.0.0.0
+      -fallbackfee=0.0002
+    ports:
+      - "18443:18443" # RPC
+      - "18444:18444" # P2P
+    volumes:
+      - bitcoin_data:/home/bitcoin/.bitcoin
+
+volumes:
+  postgres_data:
+  bitcoin_data:

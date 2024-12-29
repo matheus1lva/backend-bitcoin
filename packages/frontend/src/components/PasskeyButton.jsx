@@ -2,14 +2,9 @@ import { Button } from "./ui/button";
 import { usePasskey } from "../hooks/usePasskey";
 import { useState } from "react";
 
-export function PasskeyButton({
-  mode,
-  userId,
-  username,
-  onSuccess,
-  onError,
-}) {
-  const { registerPasskey, authenticateWithPasskey, loading, error } = usePasskey();
+export function PasskeyButton({ mode, userId, username, onSuccess, onError }) {
+  const { registerPasskey, authenticateWithPasskey, loading, error } =
+    usePasskey();
   const [isSupported] = useState(() => {
     return window.PublicKeyCredential !== undefined;
   });
@@ -31,7 +26,8 @@ export function PasskeyButton({
         onSuccess?.();
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred";
       onError?.(errorMessage);
     }
   };

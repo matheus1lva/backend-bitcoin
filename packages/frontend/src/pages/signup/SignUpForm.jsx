@@ -39,7 +39,7 @@ const SignUpForm = () => {
     onSuccess: async public_token => {
       try {
         const response = await axios.post(
-          "http://localhost:3000/v1/users/exchange-public-token",
+          "http://localhost:3001/v1/users/exchange-public-token",
           { userId: userData.id, public_token }
         );
         setBitcoinAddress(response.data.bitcoinAddress);
@@ -55,13 +55,13 @@ const SignUpForm = () => {
   const onSubmit = async data => {
     try {
       const response = await axios.post(
-        "http://localhost:3000/v1/users/signup",
+        "http://localhost:3001/v1/users/signup",
         data
       );
 
       if (response.data) {
         const responseLink = await axios.post(
-          "http://localhost:3000/v1/users/create-plaid-token",
+          "http://localhost:3001/v1/users/create-plaid-token",
           { userId: response.data.id }
         );
         setLinkToken(responseLink.data.link_token);
