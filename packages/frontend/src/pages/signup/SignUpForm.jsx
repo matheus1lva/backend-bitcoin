@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { usePlaidLink } from "react-plaid-link";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,6 +24,7 @@ const formSchema = z.object({
 });
 
 const SignUpForm = () => {
+  const navigate = useNavigate();
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -43,7 +45,9 @@ const SignUpForm = () => {
         console.error("Error completing signup:", error);
       }
     },
-    onExit: () => {},
+    onExit: () => {
+      navigate("/dashboard");
+    },
   });
 
   const onSubmit = async data => {
