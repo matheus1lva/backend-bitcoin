@@ -1,6 +1,13 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 export function Home() {
+  const user = useCurrentUser();
+
+  if (user?.id) {
+    return <Navigate to="/dashboard" />;
+  }
+
   return (
     <div>
       <h1>Crypto Wallet</h1>
