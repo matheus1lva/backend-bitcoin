@@ -1,5 +1,6 @@
 import { BitcoinService } from './bitcoin.service.js';
 import { UsersRepository } from '../users/users.repository.js';
+import { logger } from '../../utils/logger.js';
 
 export class BitcoinController {
   constructor() {
@@ -13,7 +14,7 @@ export class BitcoinController {
       const balance = await this.bitcoinService.getBalance(userId);
       res.json({ balance });
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       res.status(500).json({ message: 'Error getting Bitcoin balance' });
     }
   };
@@ -25,7 +26,7 @@ export class BitcoinController {
 
       res.json({ txid });
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       res
         .status(500)
         .json({ message: error.message || 'Error purchasing Bitcoin' });
