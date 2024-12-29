@@ -1,9 +1,13 @@
-const { UserService } = require('./user.service');
-const { UsersRepository } = require('./users.repository');
+import { logger } from '../../utils/logger.js';
+import { PlaidService } from '../plaid/plaid.service.js';
+import { UserService } from './user.service.js';
+import { UsersRepository } from './users.repository.js';
 
-class UserController {
+export class UserController {
   constructor() {
-    this.userService = new UserService(new UsersRepository());
+    const userRepository = new UsersRepository();
+    this.userService = new UserService(userRepository);
+    this.plaidService = new PlaidService(userRepository);
   }
 
   signup = async (req, res) => {
@@ -15,7 +19,8 @@ class UserController {
       if (error.message === 'User already exists') {
         return res.status(409).json({ message: error.message });
       }
-      console.error(error);
+
+      logger.error(error);
       res.status(500).json({ message: 'Error creating user' });
     }
   };
@@ -29,29 +34,28 @@ class UserController {
       if (error.message === 'Invalid credentials') {
         return res.status(401).json({ message: error.message });
       }
-      console.log(error);
+      logger.error(error);
       res.status(500).json({ message: 'Error logging in' });
     }
   };
 
   createPlaidToken = async (req, res) => {
     try {
-      const token = await this.userService.createPlaidToken(req.body);
+      const token = await this.plaidService.createPlaidToken(req.body);
       res.json(token);
-    } catch (err) {
+    } catch (error) {
+      logger.error(error);
       res.status(500).json({ message: 'failed to create token' });
     }
   };
 
   exchangePublicToken = async (req, res) => {
     try {
-      const exchange = await this.userService.exchangePublicToken(req.body);
+      const exchange = await this.plaidService.exchangePublicToken(req.body);
       res.json(exchange);
-    } catch (err) {
-      console.log(err);
+    } catch (error) {
+      logger.error(error);
       res.status(500).json({ message: 'failed to create token' });
     }
   };
 }
-
-module.exports = { UserController };

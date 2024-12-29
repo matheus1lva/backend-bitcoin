@@ -1,10 +1,8 @@
 import { PlaidApi, Configuration, PlaidEnvironments } from 'plaid';
-import { db } from '../../config/database';
-import { userTable } from '../../schema';
-import { eq } from 'drizzle-orm';
 
 export class PlaidService {
-  constructor() {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
     this.plaidClient = new PlaidApi(
       new Configuration({
         basePath: PlaidEnvironments['sandbox'],
@@ -20,13 +18,9 @@ export class PlaidService {
   }
 
   async getUserAccountId(userId) {
-    const user = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, userId))
-      .limit(1);
+    const user = this.userRepository.getById(userId);
 
-    const plaidAccessToken = user[0].plaidAccessToken;
+    const plaidAccessToken = user.plaidAccessToken;
 
     const response = await this.plaidClient.accountsGet({
       access_token: plaidAccessToken,
@@ -45,13 +39,9 @@ export class PlaidService {
 
   async processPayment(userId, amount) {
     try {
-      const user = await db
-        .select()
-        .from(userTable)
-        .where(eq(userTable.id, userId))
-        .limit(1);
+      const user = await this.userRepository.getById(userId);
 
-      if (!user[0] || !user[0].plaidAccessToken) {
+      if (!user || !user.plaidAccessToken) {
         throw new Error('Bank account not linked');
       }
 
@@ -85,6 +75,51 @@ export class PlaidService {
     } catch (error) {
       console.error('Error creating payment:', error);
       throw new Error('Failed to process payment');
+    }
+  }
+
+  async exchangePublicToken(data) {
+    const publicToken = data.public_token;
+    const userId = data.userId;
+
+    try {
+      const response = await this.plaidClient.itemPublicTokenExchange({
+        public_token: publicToken,
+      });
+
+      const accessToken = response.data.access_token;
+      const itemID = response.data.item_id;
+
+      await this.userRepository.updateById({
+        id: userId,
+        plaidAccessToken: accessToken,
+        plaidItemId: itemID,
+      });
+
+      return { public_token_exchange: 'completed' };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async createPlaidToken(data) {
+    const userId = data.userId;
+    const request = {
+      user: {
+        client_user_id: userId,
+      },
+      client_name: 'Btc wallet',
+      products: [Products.Auth, Products.Transfer],
+      language: 'en',
+      country_codes: [CountryCode.Us],
+    };
+
+    try {
+      const response = await this.plaidClient.linkTokenCreate(request);
+      return response.data;
+    } catch (err) {
+      console.error(err);
     }
   }
 }

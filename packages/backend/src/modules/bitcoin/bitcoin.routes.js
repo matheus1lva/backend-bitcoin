@@ -5,7 +5,6 @@ import { authMiddleware } from '../../middleware/auth.middleware.js';
 const router = express.Router();
 const bitcoinController = new BitcoinController();
 
-// All routes require authentication
 router.use(authMiddleware);
 
 router.post('/purchase', bitcoinController.purchaseBitcoin);

@@ -7,8 +7,30 @@ export class UsersRepository {
     const result = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.id, userId))
-      .limit(1);
+      .where(eq(userTable.id, userId));
+    return result[0];
+  }
+
+  async updateById(data) {
+    const result = await db
+      .update(userTable)
+      .set(data)
+      .where(eq(userTable.id, data.id))
+      .returning();
+
+    return result[0];
+  }
+
+  async create(data) {
+    const result = await db.insert(userTable).values(data).returning();
+    return result[0];
+  }
+
+  async findByEmail(email) {
+    const result = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.email, email));
     return result[0];
   }
 }

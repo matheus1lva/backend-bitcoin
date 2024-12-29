@@ -1,21 +1,13 @@
 import bcrypt from 'bcrypt';
 import * as bitcoin from 'bitcoinjs-lib';
-import { db } from '../../config/database';
-import { userTable } from '../../schema';
-import { eq } from 'drizzle-orm';
-import {
-  Configuration,
-  CountryCode,
-  PlaidApi,
-  PlaidEnvironments,
-  Products,
-} from 'plaid';
+import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import jwt from 'jsonwebtoken';
 const ecc = require('tiny-secp256k1');
 const { ECPairFactory } = require('ecpair');
 const ECPair = ECPairFactory(ecc);
 export class UserService {
-  constructor() {
+  constructor(userRepository) {
+    this.userRepository = userRepository;
     this.plaidClient = new PlaidApi(
       new Configuration({
         basePath: PlaidEnvironments['sandbox'],
@@ -52,11 +44,6 @@ export class UserService {
   }
 
   async signup(data) {
-    // Validate required fields
-    if (!data.name || !data.email || !data.password) {
-      throw new Error('Missing required fields');
-    }
-
     const now = new Date();
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const addresses = await this.generateBitcoinAddress();
@@ -71,18 +58,18 @@ export class UserService {
       btcKey: addresses.privateKey,
     };
 
-    const user = await db.insert(userTable).values(insertData).returning();
+    const user = await this.userRepository.create(insertData);
 
-    const { password, ...userWithoutPassword } = user[0];
+    if (!user) {
+      throw new Error('User already exists');
+    }
+
+    const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
 
   async login(email, inputPassword) {
-    const user = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.email, email))
-      .limit(1);
+    const user = await this.userRepository.findByEmail(email);
 
     if (!user[0]) {
       throw new UnauthorizedException('Invalid credentials');
@@ -103,51 +90,5 @@ export class UserService {
     });
 
     return { user: userWithoutPassword, token };
-  }
-
-  async createPlaidToken(data) {
-    const userId = data.userId;
-    const request = {
-      user: {
-        client_user_id: userId,
-      },
-      client_name: 'Btc wallet',
-      products: [Products.Auth, Products.Transfer],
-      language: 'en',
-      country_codes: [CountryCode.Us],
-    };
-
-    try {
-      const response = await this.plaidClient.linkTokenCreate(request);
-      return response.data;
-    } catch (err) {
-      console.error(err);
-    }
-  }
-  async exchangePublicToken(data) {
-    const publicToken = data.public_token;
-    const userId = data.userId;
-
-    try {
-      const response = await this.plaidClient.itemPublicTokenExchange({
-        public_token: publicToken,
-      });
-
-      const accessToken = response.data.access_token;
-      const itemID = response.data.item_id;
-
-      await db
-        .update(userTable)
-        .set({
-          plaidAccessToken: accessToken,
-          plaidItemId: itemID,
-        })
-        .where(eq(userTable.id, userId));
-
-      return { public_token_exchange: 'completed' };
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
   }
 }

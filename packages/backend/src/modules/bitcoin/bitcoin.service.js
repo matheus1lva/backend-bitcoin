@@ -1,6 +1,7 @@
 import * as bitcoin from 'bitcoinjs-lib';
 import * as ecc from 'tiny-secp256k1';
 import { ECPairFactory } from 'ecpair';
+import { isDev } from '../../utils/envs.js';
 import axios from 'axios';
 const ECPair = ECPairFactory(ecc);
 const DUST_THRESHOLD = 546; // minimum amount in satoshis
@@ -8,7 +9,7 @@ const DUST_THRESHOLD = 546; // minimum amount in satoshis
 export class BitcoinService {
   constructor(userRepository) {
     this.userRepository = userRepository;
-    this.network = bitcoin.networks.regtest;
+    this.network = isDev ? bitcoin.networks.regtest : bitcoin.networks.bitcoin;
     this.regtestApi = process.env.BITCOIN_RPC_URL || 'http://localhost:18443';
     this.rpcAuth = {
       username: process.env.BITCOIN_RPC_USER || 'bitcoin',
@@ -16,8 +17,11 @@ export class BitcoinService {
     };
   }
 
-  async getBalance(address) {
+  async getBalance(userId) {
     try {
+      const user = await this.userRepository.getById(userId);
+      const address = user.btcReceiveAddress;
+
       const response = await axios.post(
         this.regtestApi + '/wallet/legacy_wallet',
         {
@@ -82,9 +86,7 @@ export class BitcoinService {
 
   async getEstimatedFee() {
     try {
-      const MIN_RELAY_FEE_SATS = 21000; // Slightly higher than 20711 to ensure we meet the requirement
-
-      // First get the minimum relay fee
+      const MIN_RELAY_FEE_SATS = 21000;
       const networkInfoResponse = await axios.post(
         this.regtestApi,
         {
@@ -98,7 +100,7 @@ export class BitcoinService {
         },
       );
 
-      const minRelayFee = networkInfoResponse.data.result.relayfee || 0.00021; // 21000 sats in BTC
+      const minRelayFee = networkInfoResponse.data.result.relayfee || 0.00021;
 
       const response = await axios.post(
         this.regtestApi,
@@ -123,21 +125,18 @@ export class BitcoinService {
         );
       }
 
-      // Calculate fee based on typical transaction size (250 bytes)
       const estimatedFee = (feeRate * 250) / 1024;
 
-      // Convert to satoshis to check against minimum
       const estimatedFeeSats = Math.round(estimatedFee * 100000000);
 
-      // Ensure we're above the minimum relay fee
       if (estimatedFeeSats < MIN_RELAY_FEE_SATS) {
-        return MIN_RELAY_FEE_SATS / 100000000; // Convert back to BTC
+        return MIN_RELAY_FEE_SATS / 100000000;
       }
 
       return estimatedFee;
     } catch (error) {
       console.log('Fee estimation failed:', error);
-      return 0.00021; // Return 21000 satoshis in BTC
+      return 0.00021;
     }
   }
 
