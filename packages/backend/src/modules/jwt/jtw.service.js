@@ -1,3 +1,5 @@
+import jwt from 'jsonwebtoken';
+
 export class JwtService {
   sign(payload) {
     const token = jwt.sign(payload, process.env.JWT_SECRET, {

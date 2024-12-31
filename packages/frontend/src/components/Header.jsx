@@ -15,7 +15,7 @@ export function Header() {
           </Link>
         </div>
         <div className="flex items-center">
-          {!user.id ? (
+          {!user?.id ? (
             <>
               <Link
                 to="/signup"

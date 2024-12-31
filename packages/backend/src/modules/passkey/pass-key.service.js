@@ -4,26 +4,35 @@ import {
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
-import { db } from '../../config/database';
-import { eq } from 'drizzle-orm';
-import { authenticators } from '../../schema/authenticator.schema';
-import { userTable } from '../../schema';
+import { logger } from '../../utils/logger';
 
-const rpName = 'Your App Name';
-const rpID = process.env.RPID || 'localhost';
-const origin = process.env.ORIGIN || `http://${rpID}:5173`;
+const rpName = process.env.RP_NAME || 'Bitcoin Wallet';
+const rpID =
+  process.env.NODE_ENV === 'production' ? process.env.RPID : 'localhost';
+
+const origin =
+  process.env.NODE_ENV === 'production'
+    ? process.env.ORIGIN
+    : 'http://localhost:5173';
 
 class PasskeyService {
-  static async generateRegistrationOptions(userId, username) {
-    const userAuthenticators = await db
-      .select()
-      .from(authenticators)
-      .where(eq(authenticators.userId, userId));
+  constructor(authenticatorRepository, userRepository, jwtService) {
+    this.authenticatorRepository = authenticatorRepository;
+    this.userRepository = userRepository;
+    this.jwtService = jwtService;
+  }
+
+  async generateRegistrationOptions(userId, username) {
+    const [userAuthenticators] =
+      await this.authenticatorRepository.findByUserId(userId);
+
+    const userIdBuffer = Buffer.from(userId.replace(/-/g, ''), 'hex');
+    const userIdArray = new Uint8Array(userIdBuffer);
 
     const options = await generateRegistrationOptions({
       rpName,
       rpID,
-      userID: userId,
+      userID: userIdArray,
       userName: username,
       attestationType: 'none',
       authenticatorSelection: {
@@ -41,7 +50,7 @@ class PasskeyService {
     return options;
   }
 
-  static async verifyRegistration(userId, credential, challenge) {
+  async verifyRegistration(userId, credential, challenge) {
     const verification = await verifyRegistrationResponse({
       response: credential,
       expectedChallenge: challenge,
@@ -50,99 +59,106 @@ class PasskeyService {
     });
 
     if (verification.verified && verification.registrationInfo) {
-      const { credentialID, credentialPublicKey, counter } =
-        verification.registrationInfo;
-
-      await db.insert(authenticators).values({
+      await this.authenticatorRepository.create({
         userId,
-        credentialId: Buffer.from(credentialID).toString('base64url'),
-        credentialPublicKey:
-          Buffer.from(credentialPublicKey).toString('base64url'),
-        counter: counter.toString(),
-        credentialDeviceType: credential.response.transports
-          ? 'platform'
-          : 'cross-platform',
-        credentialBackedUp: credential.response.backupEligible
+        credentialId: verification.registrationInfo.credential.id,
+        credentialPublicKey: Buffer.from(
+          verification.registrationInfo.credential.publicKey,
+        ).toString('hex'),
+        counter: verification.registrationInfo.credential.counter,
+        credentialDeviceType:
+          verification.registrationInfo.credentialDeviceType,
+        credentialBackedUp: verification.registrationInfo.credential.backedUp
           ? 'eligible'
           : 'ineligible',
-        transports: credential.response.transports || [],
+        transports: verification.registrationInfo.credential.transports,
       });
     }
 
     return verification;
   }
 
-  static async generateAuthenticationOptions(username) {
-    const user = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.username, username))
-      .limit(1);
-    if (!user[0]) {
-      throw new Error('User not found');
-    }
-
-    const userAuthenticators = await db
-      .select()
-      .from(authenticators)
-      .where(eq(authenticators.userId, user[0].id));
-
+  async generateAuthenticationOptions() {
     const options = await generateAuthenticationOptions({
       rpID,
-      allowCredentials: userAuthenticators.map((authenticator) => ({
-        id: Buffer.from(authenticator.credentialId, 'base64url'),
-        type: 'public-key',
-        transports: authenticator.transports || undefined,
-      })),
-      userVerification: 'preferred',
+      allowCredentials: [],
+      userVerification: 'required',
     });
 
     return options;
   }
 
-  static async verifyAuthentication(credential, challenge) {
-    const credentialIdBuffer = Buffer.from(credential.id, 'base64url');
-    const authenticator = await db
-      .select()
-      .from(authenticators)
-      .where(
-        eq(
-          authenticators.credentialId,
-          credentialIdBuffer.toString('base64url'),
-        ),
-      )
-      .limit(1);
+  async verifyAuthentication(credential, challenge) {
+    try {
+      const storedAuthenticator =
+        await this.authenticatorRepository.findByCredentialId(credential.id);
 
-    if (!authenticator[0]) {
-      throw new Error('Authenticator not found');
-    }
+      if (!storedAuthenticator) {
+        throw new Error('Authenticator not found');
+      }
 
-    const verification = await verifyAuthenticationResponse({
-      response: credential,
-      expectedChallenge: challenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
-      authenticator: {
-        credentialID: Buffer.from(authenticator[0].credentialId, 'base64url'),
-        credentialPublicKey: Buffer.from(
-          authenticator[0].credentialPublicKey,
+      const authenticatorData = {
+        credentialID: Buffer.from(
+          storedAuthenticator.credentialId,
           'base64url',
         ),
-        counter: parseInt(authenticator[0].counter),
-      },
-    });
+        credentialPublicKey: Buffer.from(
+          storedAuthenticator.credentialPublicKey,
+          'hex',
+        ),
+        counter: Number(storedAuthenticator.counter || 0),
+        transports: storedAuthenticator.transports || undefined,
+      };
 
-    if (verification.verified) {
-      await db
-        .update(authenticators)
-        .set({
-          counter: verification.authenticationInfo.newCounter.toString(),
-          lastUsedAt: new Date(),
-        })
-        .where(eq(authenticators.id, authenticator[0].id));
+      const verification = await verifyAuthenticationResponse({
+        response: {
+          ...credential,
+          ...credential.response,
+          counter: 0,
+        },
+        credential: {
+          ...storedAuthenticator,
+          publicKey: Buffer.from(
+            storedAuthenticator.credentialPublicKey,
+            'hex',
+          ),
+          counter: Number(storedAuthenticator.counter),
+        },
+        expectedChallenge: challenge,
+        expectedOrigin: origin,
+        expectedRPID: rpID,
+        authenticator: authenticatorData,
+        requireUserVerification: true,
+      });
+
+      const { verified, authenticationInfo } = verification;
+
+      if (!verified) {
+        return { verified: false };
+      }
+
+      const user = await this.userRepository.getById(
+        storedAuthenticator.userId,
+      );
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      await this.authenticatorRepository.updateCounter(
+        credential.id,
+        authenticationInfo.newCounter.toString(),
+      );
+
+      return {
+        verified: true,
+        token: this.jwtService.sign({ userId: user.id }),
+        user,
+      };
+    } catch (error) {
+      logger.error('Authentication verification failed:', error);
+      throw new Error('Authentication failed');
     }
-
-    return verification;
   }
 }
 

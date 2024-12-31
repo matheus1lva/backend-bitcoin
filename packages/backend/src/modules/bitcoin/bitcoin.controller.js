@@ -1,5 +1,5 @@
 import { BitcoinService } from './bitcoin.service.js';
-import { UsersRepository } from '../users/users.repository.js';
+import { UsersRepository } from '../user/user.repository.js';
 import { logger } from '../../utils/logger.js';
 
 export class BitcoinController {

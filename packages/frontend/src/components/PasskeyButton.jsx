@@ -2,16 +2,41 @@ import { Button } from "./ui/button";
 import { usePasskey } from "../hooks/usePasskey";
 import { useState } from "react";
 
-export function PasskeyButton({ mode, userId, username, onSuccess, onError }) {
-  const { registerPasskey, authenticateWithPasskey, loading } = usePasskey();
+export function PasskeyButton({
+  mode,
+  userId,
+  username,
+  onSuccess,
+  onError,
+  disabled,
+}) {
+  const {
+    registerPasskey,
+    authenticateWithPasskey,
+    loading,
+    error: passkeyError,
+  } = usePasskey();
   const [isSupported] = useState(() => {
-    return window.PublicKeyCredential !== undefined;
+    return (
+      window.PublicKeyCredential !== undefined &&
+      typeof window.PublicKeyCredential
+        .isUserVerifyingPlatformAuthenticatorAvailable === "function"
+    );
   });
 
   const handleClick = async () => {
     try {
       if (!isSupported) {
         throw new Error("Passkeys are not supported in this browser");
+      }
+
+      // Check if platform authenticator is available
+      const isPlatformAuthenticatorAvailable =
+        await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if (!isPlatformAuthenticatorAvailable) {
+        throw new Error(
+          "No platform authenticator available (Face ID, Touch ID, Windows Hello, etc)"
+        );
       }
 
       let success = false;
@@ -23,10 +48,12 @@ export function PasskeyButton({ mode, userId, username, onSuccess, onError }) {
 
       if (success) {
         onSuccess?.();
+      } else if (passkeyError) {
+        onError?.(passkeyError);
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "An error occurred";
+        err.response?.data?.message || err.message || "An error occurred";
       onError?.(errorMessage);
     }
   };
@@ -38,17 +65,15 @@ export function PasskeyButton({ mode, userId, username, onSuccess, onError }) {
   return (
     <Button
       onClick={handleClick}
-      disabled={loading}
+      disabled={loading || disabled}
       variant="outline"
       className="w-full"
     >
-      {loading ? (
-        <span className="animate-pulse">Processing...</span>
-      ) : mode === "register" ? (
-        "Register Passkey"
-      ) : (
-        "Sign in with Passkey"
-      )}
+      {loading
+        ? "Processing..."
+        : mode === "register"
+          ? "Continue with passkey"
+          : "Sign in with passkey"}
     </Button>
   );
 }

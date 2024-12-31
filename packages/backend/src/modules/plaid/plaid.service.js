@@ -110,9 +110,9 @@ export class PlaidService {
         client_user_id: userId,
       },
       client_name: 'Btc wallet',
-      products: [Products.Auth, Products.Transfer],
+      products: ['auth', 'transfer'],
       language: 'en',
-      country_codes: [CountryCode.Us],
+      country_codes: ['US'],
     };
 
     try {

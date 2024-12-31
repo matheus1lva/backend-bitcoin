@@ -1,34 +1,38 @@
 import { Router } from 'express';
 import { PasskeyController } from './pass-key.controller';
 import { validateRequest } from 'zod-express-middleware';
-
 import registrationSchema from './dto/registration.dto.js';
-import verifyRegistrationSchema from './dto/verify-registration.dto.js';
-import authenticationSchema from './dto/authentication.dto.js';
-import verifyAuthenticationSchema from './dto/verify-authentication.dto.js';
+import { AuthenticatorRepository } from '../authenticator/authenticator.repository.js';
+import { PasskeyService } from './pass-key.service.js';
+import { UsersRepository } from '../user/user.repository.js';
+import { JwtService } from '../jwt/jtw.service.js';
 
 export const passKeyRouter = Router();
+
+const authenticatorRepository = new AuthenticatorRepository();
+const userRepository = new UsersRepository();
+const jwtService = new JwtService();
+const passkeyService = new PasskeyService(
+  authenticatorRepository,
+  userRepository,
+  jwtService,
+);
+const passkeyController = new PasskeyController(passkeyService);
 
 passKeyRouter.post(
   '/register/options',
   validateRequest(registrationSchema),
-  PasskeyController.generateRegistrationOptions,
+  passkeyController.generateRegistrationOptions,
 );
 
-passKeyRouter.post(
-  '/register/verify',
-  validateRequest(verifyRegistrationSchema),
-  PasskeyController.verifyRegistration,
-);
+passKeyRouter.post('/register/verify', passkeyController.verifyRegistration);
 
 passKeyRouter.post(
   '/authenticate/options',
-  validateRequest(authenticationSchema),
-  PasskeyController.generateAuthenticationOptions,
+  passkeyController.generateAuthenticationOptions,
 );
 
 passKeyRouter.post(
   '/authenticate/verify',
-  validateRequest(verifyAuthenticationSchema),
-  PasskeyController.verifyAuthentication,
+  passkeyController.verifyAuthentication,
 );

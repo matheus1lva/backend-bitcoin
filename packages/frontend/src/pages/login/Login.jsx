@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { apiClient } from "@/lib/client";
+import { PasskeyButton } from "@/components/PasskeyButton";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -32,6 +35,8 @@ export const Login = () => {
     },
   });
 
+  const [error, setError] = useState(null);
+
   const loginMutation = useMutation({
     mutationFn: values => apiClient.post("/v1/users/login", values),
     onSuccess: response => {
@@ -41,15 +46,23 @@ export const Login = () => {
       navigate("/dashboard");
     },
     onError: error => {
-      form.setError("root", {
-        message:
-          error.response?.data?.message || "An error occurred during login",
-      });
+      setError(
+        error.response?.data?.message || "An error occurred during login"
+      );
     },
   });
 
   const onSubmit = values => {
+    setError(null);
     loginMutation.mutate(values);
+  };
+
+  const handlePasskeySuccess = () => {
+    navigate("/dashboard");
+  };
+
+  const handlePasskeyError = errorMessage => {
+    setError(errorMessage);
   };
 
   return (
@@ -58,7 +71,24 @@ export const Login = () => {
         <CardHeader>
           <h2 className="text-2xl font-semibold text-center">Sign in</h2>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <PasskeyButton
+            mode="authenticate"
+            onSuccess={handlePasskeySuccess}
+            onError={handlePasskeyError}
+          />
+
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-muted-foreground">
+                Or continue with email
+              </span>
+            </div>
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -101,6 +131,15 @@ export const Login = () => {
                 <p className="text-sm text-red-500">
                   {form.formState.errors.root.message}
                 </p>
+              )}
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    There was an error performing login with this passkey
+                  </AlertDescription>
+                </Alert>
               )}
 
               <Button type="submit" className="w-full">

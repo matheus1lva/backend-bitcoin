@@ -2,7 +2,7 @@ import { logger } from '../../utils/logger.js';
 import { JwtService } from '../jwt/jtw.service.js';
 import { PlaidService } from '../plaid/plaid.service.js';
 import { UserService } from './user.service.js';
-import { UsersRepository } from './users.repository.js';
+import { UsersRepository } from './user.repository.js';
 
 export class UserController {
   constructor() {
@@ -23,6 +23,8 @@ export class UserController {
       if (error.message === 'User already exists') {
         return res.status(409).json({ message: error.message });
       }
+
+      console.log(error);
 
       res.status(500).json({ message: 'Error creating user' });
     }
@@ -47,6 +49,7 @@ export class UserController {
       const token = await this.plaidService.createPlaidToken(req.body);
       res.json(token);
     } catch (error) {
+      console.log(error);
       logger.error(error);
       res.status(500).json({ message: 'failed to create token' });
     }
