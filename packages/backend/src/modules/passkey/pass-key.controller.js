@@ -16,6 +16,7 @@ export class PasskeyController {
       req.session.challenge = options.challenge;
       res.json(options);
     } catch (error) {
+      console.log(error);
       logger.error(error);
       res
         .status(500)

@@ -23,7 +23,7 @@ export function App() {
       <Router>
         <div className="min-h-screen">
           <Header />
-          <main>
+          <div className="container mx-auto">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/signup" element={<SignUpForm />} />
@@ -35,7 +35,7 @@ export function App() {
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
-          </main>
+          </div>
         </div>
       </Router>
       <Toaster />

@@ -46,6 +46,7 @@ const SignUpForm = () => {
     onSuccess: async public_token => {
       try {
         await exchangePublicToken(userData.id, public_token);
+        navigate("/dashboard");
       } catch (error) {
         console.error("Error completing signup:", error);
         setError("Failed to link bank account");

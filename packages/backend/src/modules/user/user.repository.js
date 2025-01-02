@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../config/database';
 import { userTable } from '../../schema';
 
-export class UsersRepository {
+export class UserRepository {
   async getById(userId) {
     const result = await db
       .select()

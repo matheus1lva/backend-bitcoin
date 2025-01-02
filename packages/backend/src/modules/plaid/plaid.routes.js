@@ -1,9 +1,13 @@
 import express from 'express';
 import { PlaidController } from './plaid.controller.js';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
+import { PlaidService } from './plaid.service.js';
+import { UserRepository } from '../user/user.repository.js';
 
 const router = express.Router();
-const plaidController = new PlaidController();
+const userRepository = new UserRepository();
+const plaidService = new PlaidService(userRepository);
+const plaidController = new PlaidController(plaidService);
 
 router.use(authMiddleware);
 

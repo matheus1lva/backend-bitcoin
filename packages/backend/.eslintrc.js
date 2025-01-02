@@ -39,5 +39,6 @@ module.exports = {
     'security/detect-pseudoRandomBytes': 'error',
     'no-process-exit': 'error',
     'no-sync': 'warn',
+    'no-console': 'error',
   },
 };

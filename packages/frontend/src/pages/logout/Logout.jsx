@@ -13,6 +13,9 @@ export const Logout = () => {
     // Clear Authorization header
     delete apiClient.defaults.headers.common["Authorization"];
 
+    // Dispatch storage event to update state in current window
+    window.dispatchEvent(new Event("storage"));
+
     // Redirect to login
     navigate("/login");
   }, [navigate]);

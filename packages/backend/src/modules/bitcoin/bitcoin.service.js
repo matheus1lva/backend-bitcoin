@@ -17,6 +17,22 @@ export class BitcoinService {
     };
   }
 
+  async getCurrentPrice() {
+    try {
+      if (isDev) {
+        return 30000;
+      }
+
+      const response = await axios.get(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+      );
+      return response.data.bitcoin.usd;
+    } catch (error) {
+      console.error('Error fetching Bitcoin price:', error);
+      throw new Error('Failed to get Bitcoin price');
+    }
+  }
+
   async getBalance(userId) {
     try {
       const user = await this.userRepository.getById(userId);

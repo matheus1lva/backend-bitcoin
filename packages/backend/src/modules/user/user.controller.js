@@ -2,11 +2,11 @@ import { logger } from '../../utils/logger.js';
 import { JwtService } from '../jwt/jtw.service.js';
 import { PlaidService } from '../plaid/plaid.service.js';
 import { UserService } from './user.service.js';
-import { UsersRepository } from './user.repository.js';
+import { UserRepository } from './user.repository.js';
 
 export class UserController {
   constructor() {
-    const userRepository = new UsersRepository();
+    const userRepository = new UserRepository();
     const jwtService = new JwtService();
     const plaidService = new PlaidService(userRepository);
     this.userService = new UserService(userRepository, jwtService);

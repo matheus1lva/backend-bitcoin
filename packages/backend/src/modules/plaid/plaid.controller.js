@@ -1,8 +1,6 @@
-import { PlaidService } from './plaid.service.js';
-
 export class PlaidController {
-  constructor() {
-    this.plaidService = new PlaidService();
+  constructor(plaidService) {
+    this.plaidService = plaidService;
   }
 
   getBalance = async (req, res) => {

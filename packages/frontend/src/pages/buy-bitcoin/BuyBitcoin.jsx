@@ -49,12 +49,19 @@ export const BuyBitcoin = () => {
     enabled: !!hasLinkedBank,
   });
 
+  const { data: priceData } = useQuery({
+    queryKey: ["bitcoinPrice"],
+    queryFn: bitcoinService.getCurrentPrice,
+    refetchInterval: 60000,
+  });
+
   const purchaseMutation = useMutation({
     mutationFn: values =>
       bitcoinService.purchaseBitcoin(parseFloat(values.amount)),
     onSuccess: data => {
       toast({
         title: "Purchase successful",
+        description: `Purchased ${data.amountBtc.toFixed(8)} BTC for $${data.amountUsd.toFixed(2)}`,
       });
       setTxId(data.txid);
       form.reset();
@@ -72,11 +79,20 @@ export const BuyBitcoin = () => {
   function onSubmit(values) {
     const purchaseAmount = parseFloat(values.amount);
     if (bankBalance && purchaseAmount > bankBalance.available) {
+      toast({
+        title: "Insufficient funds",
+        description: "You don't have enough funds in your bank account",
+        variant: "destructive",
+      });
       return;
     }
 
     purchaseMutation.mutate(values);
   }
+
+  const estimatedBtc = form.watch("amount")
+    ? (parseFloat(form.watch("amount")) / (priceData?.price || 0)).toFixed(8)
+    : "0.00000000";
 
   return (
     <Card>
@@ -116,6 +132,17 @@ export const BuyBitcoin = () => {
           </div>
         )}
 
+        {priceData?.price && (
+          <div className="space-y-1">
+            <h4 className="text-sm font-medium text-muted-foreground">
+              Current Bitcoin Price
+            </h4>
+            <p className="text-2xl font-bold">
+              ${priceData.price.toLocaleString()}
+            </p>
+          </div>
+        )}
+
         {txId && (
           <div className="border-2 border-green-500 rounded pl-2 bg-green-50 p-3">
             <h4 className="text-sm font-medium text-green-700">
@@ -140,6 +167,9 @@ export const BuyBitcoin = () => {
                   <FormControl>
                     <Input {...field} type="text" min="0" />
                   </FormControl>
+                  <p className="text-sm text-muted-foreground">
+                    ≈ {estimatedBtc} BTC
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

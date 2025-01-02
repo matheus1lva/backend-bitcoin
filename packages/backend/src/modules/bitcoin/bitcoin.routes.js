@@ -9,5 +9,6 @@ router.use(authMiddleware);
 
 router.post('/purchase', bitcoinController.purchaseBitcoin);
 router.get('/balance', bitcoinController.getBalance);
+router.get('/price', bitcoinController.getCurrentPrice);
 
 export { router as bitcoinRouter };

@@ -40,7 +40,7 @@ class PasskeyService {
         userVerification: 'preferred',
         authenticatorAttachment: 'platform',
       },
-      excludeCredentials: userAuthenticators.map((authenticator) => ({
+      excludeCredentials: userAuthenticators?.map((authenticator) => ({
         id: Buffer.from(authenticator.credentialId, 'base64url'),
         type: 'public-key',
         transports: authenticator.transports || undefined,
@@ -152,7 +152,7 @@ class PasskeyService {
 
       return {
         verified: true,
-        token: this.jwtService.sign({ userId: user.id }),
+        token: this.jwtService.sign({ id: user.id }),
         user,
       };
     } catch (error) {

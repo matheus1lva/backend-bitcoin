@@ -17,8 +17,20 @@ export class PlaidService {
     );
   }
 
+  getBalance = async (userId) => {
+    const user = await this.userRepository.getById(userId);
+    const plaidAccessToken = user.plaidAccessToken;
+    const response = await this.plaidClient.accountsBalanceGet({
+      access_token: plaidAccessToken,
+    });
+    return response.data?.accounts.reduce((acc, curr) => {
+      acc[curr.official_name] = curr.balances.available;
+      return acc;
+    }, {});
+  };
+
   async getUserAccountId(userId) {
-    const user = this.userRepository.getById(userId);
+    const user = await this.userRepository.getById(userId);
 
     const plaidAccessToken = user.plaidAccessToken;
 
@@ -47,34 +59,20 @@ export class PlaidService {
 
       const accountId = await this.getUserAccountId(userId);
 
-      const authResponseObject =
-        await this.plaidClient.transferAuthorizationCreate({
-          access_token: user[0].plaidAccessToken,
-          account_id: accountId,
-          idempotency_key: 'unique-key',
-          user: {
-            client_user_id: userId,
-            legal_name: user[0].name,
-            email_address: user[0].email,
-          },
-          amount: amount,
-          ach_class: 'ppd',
-          network: 'same-day-ach',
-          user_present: true,
-        });
+      const formattedAmount = amount.toFixed(2);
 
-      const transferResponse = await this.plaidClient.transferCreate({
-        access_token: user[0].plaidAccessToken,
-        authorization_id: authResponseObject.data.authorization_id,
+      const authResponse = await this.plaidClient.transferCreate({
+        access_token: user.plaidAccessToken,
         account_id: accountId,
-        description: 'transfer to btc wallet to buy bitcoin',
-        amount,
+        amount: formattedAmount,
+        description: 'Buy BTC',
       });
 
-      return transferResponse?.data?.transfer.id;
+      return authResponse?.data?.transfer?.id;
     } catch (error) {
-      console.error('Error creating payment:', error);
-      throw new Error('Failed to process payment');
+      throw new Error(
+        error.response?.data?.error_message || 'Failed to process payment',
+      );
     }
   }
 
@@ -98,7 +96,6 @@ export class PlaidService {
 
       return { public_token_exchange: 'completed' };
     } catch (error) {
-      console.error(error);
       throw error;
     }
   }
@@ -118,8 +115,6 @@ export class PlaidService {
     try {
       const response = await this.plaidClient.linkTokenCreate(request);
       return response.data;
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) {}
   }
 }
