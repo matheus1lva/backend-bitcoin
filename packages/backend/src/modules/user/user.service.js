@@ -32,11 +32,6 @@ export class UserService {
       network,
     });
 
-    console.log({
-      address,
-      privateKey: keyPair.toWIF(),
-    });
-
     return {
       address,
       privateKey: keyPair.toWIF(),

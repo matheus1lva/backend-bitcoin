@@ -32,7 +32,7 @@ export class BitcoinController {
       const btcPrice = await this.bitcoinService.getCurrentPrice();
       const btcAmount = amount / btcPrice;
 
-      const txid = await this.bitcoinService.sendBitcoin(userId, btcAmount);
+      const txid = await this.bitcoinService.purchase(userId, btcAmount);
 
       res.json({
         txid,

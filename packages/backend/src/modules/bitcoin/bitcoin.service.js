@@ -156,7 +156,7 @@ export class BitcoinService {
     }
   }
 
-  async sendBitcoin(userId, amount) {
+  async purchase(userId, amount) {
     try {
       const user = await this.userRepository.getById(userId);
       const toAddress = user.btcReceiveAddress;
@@ -246,8 +246,7 @@ export class BitcoinService {
 
       return response.data.result;
     } catch (err) {
-      console.log(err.response.data);
-      throw new Error('Failed to send Bitcoin');
+      throw new Error('Failed to purchase Bitcoin');
     }
   }
 }
