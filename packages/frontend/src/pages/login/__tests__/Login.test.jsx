@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Login } from "../Login";
 import { apiClient } from "@/lib/client";
+import { UserProvider } from "@/contexts/UserContext";
 
 // Mock the PasskeyButton component
 vi.mock("@/components/PasskeyButton", () => ({
@@ -16,11 +17,7 @@ vi.mock("@/components/PasskeyButton", () => ({
 }));
 
 // Mock the API client
-vi.mock("@/lib/client", () => ({
-  apiClient: {
-    post: vi.fn(),
-  },
-}));
+vi.mock("@/lib/client");
 
 // Mock react-router-dom's useNavigate
 const mockNavigate = vi.fn();
@@ -43,7 +40,9 @@ const renderLoginPage = () => {
   return render(
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <Login />
+        <UserProvider>
+          <Login />
+        </UserProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );
@@ -184,7 +183,7 @@ describe("Login Component", () => {
 
       await waitFor(() => {
         expect(screen.getByRole("alert")).toHaveTextContent(
-          /there was an error performing login/i
+          /invalid credentials/i
         );
         expect(localStorage.getItem("token")).toBeNull();
         expect(localStorage.getItem("user")).toBeNull();
@@ -201,9 +200,7 @@ describe("Login Component", () => {
       await user.click(screen.getByRole("button", { name: /sign in/i }));
 
       await waitFor(() => {
-        expect(screen.getByRole("alert")).toHaveTextContent(
-          /there was an error performing login/i
-        );
+        expect(screen.getByRole("alert")).toHaveTextContent(/failed to login/i);
       });
     });
   });

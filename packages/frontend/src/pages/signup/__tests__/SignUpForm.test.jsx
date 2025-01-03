@@ -1,10 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BrowserRouter } from "react-router-dom";
 import SignUpForm from "../SignUpForm";
 import { signup } from "@/services/user.service";
 import { createPlaidToken } from "@/services/plaid.service";
+import { renderWithProviders } from "@/test/test-utils";
 
 // Mock the services
 vi.mock("@/services/user.service", () => ({
@@ -60,11 +60,7 @@ describe("SignUpForm Component", () => {
 
   describe("Initial Form", () => {
     it("renders all form elements correctly", () => {
-      render(
-        <BrowserRouter>
-          <SignUpForm />
-        </BrowserRouter>
-      );
+      renderWithProviders(<SignUpForm />);
 
       expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
@@ -77,11 +73,7 @@ describe("SignUpForm Component", () => {
 
   describe("Form Validation", () => {
     it("shows validation errors when submitting empty form", async () => {
-      render(
-        <BrowserRouter>
-          <SignUpForm />
-        </BrowserRouter>
-      );
+      renderWithProviders(<SignUpForm />);
 
       await user.click(screen.getByRole("button", { name: /sign up/i }));
 
@@ -95,11 +87,7 @@ describe("SignUpForm Component", () => {
     });
 
     it("shows validation error for invalid email format", async () => {
-      render(
-        <BrowserRouter>
-          <SignUpForm />
-        </BrowserRouter>
-      );
+      renderWithProviders(<SignUpForm />);
 
       await user.type(screen.getByLabelText(/name/i), "Test User");
       await user.type(screen.getByLabelText(/email/i), "invalid-email");
@@ -115,11 +103,7 @@ describe("SignUpForm Component", () => {
     });
 
     it("shows validation error for short password", async () => {
-      render(
-        <BrowserRouter>
-          <SignUpForm />
-        </BrowserRouter>
-      );
+      renderWithProviders(<SignUpForm />);
 
       await user.type(screen.getByLabelText(/name/i), "Test User");
       await user.type(screen.getByLabelText(/email/i), "test@example.com");
@@ -138,21 +122,18 @@ describe("SignUpForm Component", () => {
     const validFormData = {
       name: "Test User",
       email: "test@example.com",
-      password: "password123",
+      password: "password123ADSondas",
     };
 
     it("handles successful signup flow", async () => {
       const mockUser = { id: "123", email: validFormData.email };
       const mockLinkToken = "test-link-token";
+      const mockToken = "test-token";
 
-      signup.mockResolvedValueOnce({ user: mockUser });
+      signup.mockResolvedValueOnce({ user: mockUser, token: mockToken });
       createPlaidToken.mockResolvedValueOnce({ link_token: mockLinkToken });
 
-      render(
-        <BrowserRouter>
-          <SignUpForm />
-        </BrowserRouter>
-      );
+      const { localStorageMock } = renderWithProviders(<SignUpForm />);
 
       await user.type(screen.getByLabelText(/name/i), validFormData.name);
       await user.type(screen.getByLabelText(/email/i), validFormData.email);
@@ -172,6 +153,14 @@ describe("SignUpForm Component", () => {
         expect(
           screen.getByText(/link bank account to plaid/i)
         ).toBeInTheDocument();
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          "user",
+          JSON.stringify(mockUser)
+        );
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          "token",
+          mockToken
+        );
       });
     });
 
@@ -180,11 +169,7 @@ describe("SignUpForm Component", () => {
       signup.mockResolvedValueOnce({ user: mockUser });
       createPlaidToken.mockResolvedValueOnce({ link_token: "test-link-token" });
 
-      render(
-        <BrowserRouter>
-          <SignUpForm />
-        </BrowserRouter>
-      );
+      renderWithProviders(<SignUpForm />);
 
       // Complete initial signup
       await user.type(screen.getByLabelText(/name/i), validFormData.name);

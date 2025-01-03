@@ -16,29 +16,32 @@ import { queryClient } from "./lib/query-client";
 import { Toaster } from "./components/ui/toaster";
 import { BuyBitcoin } from "./pages/buy-bitcoin/BuyBitcoin";
 import { Header } from "./components/Header";
+import { UserProvider } from "./contexts/UserContext";
 
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <div className="min-h-screen">
-          <Header />
-          <div className="container mx-auto">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/signup" element={<SignUpForm />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/logout" element={<Logout />} />
-              <Route element={<AuthRoute />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path={"/buy-bitcoin"} element={<BuyBitcoin />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
+      <UserProvider>
+        <Router>
+          <div className="min-h-screen">
+            <Header />
+            <div className="container mx-auto">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/signup" element={<SignUpForm />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/logout" element={<Logout />} />
+                <Route element={<AuthRoute />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path={"/buy-bitcoin"} element={<BuyBitcoin />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </Router>
-      <Toaster />
+        </Router>
+        <Toaster />
+      </UserProvider>
     </QueryClientProvider>
   );
 }

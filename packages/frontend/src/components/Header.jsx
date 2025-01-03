@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { useCurrentUser } from "../hooks/useCurrentUser";
+import { useUser } from "../contexts/UserContext";
 
 export function Header() {
-  const user = useCurrentUser();
+  const { user } = useUser();
   return (
     <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b-2 border-x-gray-500 mb-2">
       <div className="flex justify-between h-16 items-center">

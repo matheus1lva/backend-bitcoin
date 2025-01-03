@@ -1,5 +1,10 @@
 import axios from "axios";
 
+const clearAuth = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+};
+
 export const apiClient = axios.create({
   baseURL: import.meta.env.API_URL || "http://localhost:3001",
   headers: {
@@ -8,22 +13,28 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-apiClient.interceptors.request.use(function (config) {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+apiClient.interceptors.request.use(
+  config => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
 
-// Add response interceptor to handle 401 errors
 apiClient.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      clearAuth();
+      // Use history API instead of direct window.location manipulation
+      if (window.location.pathname !== "/login") {
+        window.history.pushState({}, "", "/login");
+        // Dispatch an event to notify the app of the navigation
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
     }
     return Promise.reject(error);
   }

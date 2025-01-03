@@ -9,39 +9,34 @@ import {
   getAuthenticationOptions,
   verifyAuthentication,
 } from "../services/passkey.service";
+import { useUser } from "../contexts/UserContext";
 
 export function usePasskey() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { updateUser } = useUser();
 
   const registerPasskey = async (userId, username) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Get registration options from server
       const options = await getRegistrationOptions(userId, username);
-      console.log(options);
 
-      // Create credentials
       const credential = await startRegistration({
         optionsJSON: options,
         useAutoRegister: false,
       });
 
-      // Verify registration with server
       const verification = await verifyRegistration(userId, credential);
       return verification.verified;
     } catch (err) {
-      console.log({
-        err,
-      });
       setError(
         err.response?.data?.message ||
           err.message ||
           "Failed to register passkey"
       );
-      return false;
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -52,30 +47,30 @@ export function usePasskey() {
       setLoading(true);
       setError(null);
 
-      // Get authentication options from server
       const options = await getAuthenticationOptions(username);
-
-      // Create credentials
       const credential = await startAuthentication({
         optionsJSON: options,
       });
 
-      // Verify authentication with server
       const verification = await verifyAuthentication(credential);
 
-      if (verification.verified) {
-        localStorage.setItem("token", verification.token);
-        localStorage.setItem("user", JSON.stringify(verification.user));
+      if (!verification?.verified) {
+        throw new Error("Authentication failed");
       }
 
-      return verification.verified;
+      if (!verification.token || !verification.user) {
+        throw new Error("Invalid server response");
+      }
+
+      updateUser(verification.user, verification.token);
+      return true;
     } catch (err) {
       setError(
         err.response?.data?.message ||
           err.message ||
           "Failed to authenticate with passkey"
       );
-      return false;
+      throw err;
     } finally {
       setLoading(false);
     }

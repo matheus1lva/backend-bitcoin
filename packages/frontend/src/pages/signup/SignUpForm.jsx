@@ -19,15 +19,77 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { exchangePublicToken, signup } from "../../services/user.service";
 import { createPlaidToken } from "../../services/plaid.service";
+import { useUser } from "../../contexts/UserContext";
+import { apiClient } from "@/lib/client";
+
+const PASSWORD_MIN_LENGTH = 8;
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().min(1, "Email is required").email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Invalid email address")
+    .max(255, "Email is too long"),
+  password: z
+    .string()
+    .min(
+      PASSWORD_MIN_LENGTH,
+      `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+    )
+    .max(100, "Password is too long")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
 });
+
+const RegistrationComplete = ({
+  userData,
+  passKeySet,
+  error,
+  onPasskeySuccess,
+  onPasskeyError,
+  onPlaidOpen,
+}) => {
+  return (
+    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg space-y-4">
+      <h3 className="text-lg font-semibold mb-4">Complete Your Registration</h3>
+
+      <PasskeyButton
+        mode="register"
+        userId={userData.id}
+        username={userData.email}
+        onSuccess={onPasskeySuccess}
+        onError={onPasskeyError}
+        disabled={passKeySet}
+      />
+
+      <div className="relative py-4">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-2 text-muted-foreground">And</span>
+        </div>
+      </div>
+
+      <Button onClick={() => onPlaidOpen()} className="w-full">
+        Link bank account to plaid
+      </Button>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+};
 
 const SignUpForm = () => {
   const navigate = useNavigate();
+  const { updateUser } = useUser();
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -37,20 +99,28 @@ const SignUpForm = () => {
     },
     mode: "onChange",
   });
+
   const [linkToken, setLinkToken] = useState(null);
   const [userData, setUserData] = useState(null);
   const [error, setError] = useState(null);
   const [passKeySet, setPassKeySet] = useState(false);
 
-  const { open, ready } = usePlaidLink({
+  const { open } = usePlaidLink({
     token: linkToken,
     onSuccess: async public_token => {
       try {
         await exchangePublicToken(userData.id, public_token);
+        const response = await apiClient.post("/v1/users/login", {
+          email: userData.email,
+          password: userData.password,
+        });
+        const { user, token } = response.data;
+        updateUser(user, token);
         navigate("/dashboard");
       } catch (error) {
-        console.error("Error completing signup:", error);
-        setError("Failed to link bank account");
+        setError(
+          error.response?.data?.message || "Failed to link bank account"
+        );
       }
     },
     onExit: () => {
@@ -63,61 +133,36 @@ const SignUpForm = () => {
       setError(null);
       const response = await signup(data);
 
-      if (response.user) {
-        setUserData(response.user);
-        const responseLink = await createPlaidToken(response.user.id);
-        setLinkToken(responseLink.link_token);
+      if (!response?.user) {
+        throw new Error("Invalid server response");
       }
+
+      updateUser(response.user, response.token);
+      setUserData(response.user);
+      const responseLink = await createPlaidToken(response.user.id);
+
+      if (!responseLink?.link_token) {
+        throw new Error("Failed to create Plaid token");
+      }
+
+      setLinkToken(responseLink.link_token);
     } catch (error) {
-      console.error("Error during signup:", error);
-      setError(error.response?.data?.message || "Error during signup");
+      setError(
+        error.response?.data?.message || "An error occurred during signup"
+      );
     }
-  };
-
-  const handlePasskeySuccess = () => {
-    setPassKeySet(true);
-  };
-
-  const handlePasskeyError = errorMessage => {
-    setError(errorMessage);
   };
 
   if (userData?.id) {
     return (
-      <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-lg space-y-4">
-        <h3 className="text-lg font-semibold mb-4">
-          Complete Your Registration
-        </h3>
-
-        <PasskeyButton
-          mode="register"
-          userId={userData.id}
-          username={userData.email}
-          onSuccess={handlePasskeySuccess}
-          onError={handlePasskeyError}
-          disabled={passKeySet}
-        />
-
-        <div className="relative py-4">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-muted-foreground">And</span>
-          </div>
-        </div>
-
-        <Button onClick={() => open()} className="w-full">
-          Link bank account to plaid
-        </Button>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-      </div>
+      <RegistrationComplete
+        userData={userData}
+        passKeySet={passKeySet}
+        error={error}
+        onPasskeySuccess={() => setPassKeySet(true)}
+        onPasskeyError={setError}
+        onPlaidOpen={() => open()}
+      />
     );
   }
 
@@ -168,11 +213,14 @@ const SignUpForm = () => {
             )}
           />
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={!ready && linkToken !== null}
-          >
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <Button type="submit" className="w-full">
             Sign Up
           </Button>
         </form>

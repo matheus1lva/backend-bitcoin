@@ -1,24 +1,15 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiClient } from "../../lib/client";
+import { useUser } from "../../contexts/UserContext";
 
 export const Logout = () => {
   const navigate = useNavigate();
+  const { updateUser } = useUser();
 
   useEffect(() => {
-    // Clear auth data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    // Clear Authorization header
-    delete apiClient.defaults.headers.common["Authorization"];
-
-    // Dispatch storage event to update state in current window
-    window.dispatchEvent(new Event("storage"));
-
-    // Redirect to login
+    updateUser(null, null);
     navigate("/login");
-  }, [navigate]);
+  }, [navigate, updateUser]);
 
   return null;
 };

@@ -1,8 +1,8 @@
 import { Link, Navigate } from "react-router-dom";
-import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useUser } from "../../contexts/UserContext";
 
 export function Home() {
-  const user = useCurrentUser();
+  const { user } = useUser();
 
   if (user?.id) {
     return <Navigate to="/dashboard" />;

@@ -1,26 +1,12 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { BrowserRouter } from "react-router-dom";
+import { screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { Header } from "../Header";
-
-// Mock useCurrentUser hook
-vi.mock("@/hooks/useCurrentUser", () => ({
-  useCurrentUser: vi.fn(),
-}));
+import { renderWithProviders } from "@/test/test-utils";
 
 describe("Header Component", () => {
   describe("when user is not logged in", () => {
-    beforeEach(async () => {
-      const { useCurrentUser } = await import("@/hooks/useCurrentUser");
-      useCurrentUser.mockReturnValue({});
-    });
-
     it("renders login and signup links", () => {
-      render(
-        <BrowserRouter>
-          <Header />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Header />);
 
       expect(screen.getByText(/sign up/i)).toBeInTheDocument();
       expect(screen.getByText(/login/i)).toBeInTheDocument();
@@ -29,11 +15,7 @@ describe("Header Component", () => {
     });
 
     it("has correct navigation links", () => {
-      render(
-        <BrowserRouter>
-          <Header />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Header />);
 
       expect(screen.getByText(/home/i).closest("a")).toHaveAttribute(
         "href",
@@ -51,17 +33,10 @@ describe("Header Component", () => {
   });
 
   describe("when user is logged in", () => {
-    beforeEach(async () => {
-      const { useCurrentUser } = await import("@/hooks/useCurrentUser");
-      useCurrentUser.mockReturnValue({ id: "1", name: "Test User" });
-    });
+    const mockUser = { id: "1", name: "Test User" };
 
     it("renders dashboard and logout links", () => {
-      render(
-        <BrowserRouter>
-          <Header />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Header />, { initialUser: mockUser });
 
       expect(screen.getByText(/dashboard/i)).toBeInTheDocument();
       expect(screen.getByText(/logout/i)).toBeInTheDocument();
@@ -70,11 +45,7 @@ describe("Header Component", () => {
     });
 
     it("has correct navigation links", () => {
-      render(
-        <BrowserRouter>
-          <Header />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Header />, { initialUser: mockUser });
 
       expect(screen.getByText(/home/i).closest("a")).toHaveAttribute(
         "href",

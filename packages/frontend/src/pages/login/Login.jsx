@@ -19,6 +19,7 @@ import { apiClient } from "@/lib/client";
 import { PasskeyButton } from "@/components/PasskeyButton";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useUser } from "@/contexts/UserContext";
 
 const formSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -27,56 +28,53 @@ const formSchema = z.object({
 
 export const Login = () => {
   const navigate = useNavigate();
+  const { updateUser } = useUser();
+  const [error, setError] = useState(null);
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
       password: "",
     },
-    mode: "onBlur",
+    mode: "onChange",
   });
 
-  const [error, setError] = useState(null);
-
   const loginMutation = useMutation({
-    mutationFn: values => apiClient.post("/v1/users/login", values),
-    onSuccess: response => {
-      const { token, user } = response.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+    mutationFn: async data => {
+      const response = await apiClient.post("/v1/users/login", data);
+      return response.data;
+    },
+    onSuccess: data => {
+      updateUser(data.user, data.token);
       navigate("/dashboard");
     },
     onError: error => {
-      setError(
-        error.response?.data?.message || "An error occurred during login"
-      );
+      console.log(error);
+      setError(error.response?.data?.message || "Failed to login");
     },
   });
 
-  const onSubmit = values => {
+  const onSubmit = data => {
     setError(null);
-    loginMutation.mutate(values);
-  };
-
-  const handlePasskeySuccess = () => {
-    navigate("/dashboard");
-  };
-
-  const handlePasskeyError = errorMessage => {
-    setError(errorMessage);
+    loginMutation.mutate(data);
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen">
       <Card className="w-[350px]">
         <CardHeader>
-          <h2 className="text-2xl font-semibold text-center">Sign in</h2>
+          <h2 className="text-2xl font-bold text-center">Login</h2>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <PasskeyButton
             mode="authenticate"
-            onSuccess={handlePasskeySuccess}
-            onError={handlePasskeyError}
+            onSuccess={() => {
+              navigate("/dashboard");
+            }}
+            onError={error => {
+              setError(error.response?.data?.message || "Failed to login");
+            }}
           />
 
           <div className="relative py-4">
@@ -128,23 +126,19 @@ export const Login = () => {
                 )}
               />
 
-              {form.formState.errors.root && (
-                <p className="text-sm text-red-500">
-                  {form.formState.errors.root.message}
-                </p>
-              )}
-
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    There was an error performing login with this passkey
-                  </AlertDescription>
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loginMutation.isPending}
+              >
+                {loginMutation.isPending ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </Form>

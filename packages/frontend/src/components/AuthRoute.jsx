@@ -1,9 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { useUser } from "@/contexts/UserContext";
 
 export const AuthRoute = () => {
-  const token = localStorage.getItem("token");
+  const { user } = useUser();
 
-  if (!token) {
+  if (!user || !user.hasLinkedBankAccount) {
     return <Navigate to="/login" replace />;
   }
 
