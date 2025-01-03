@@ -31,6 +31,7 @@ export const BuyBitcoin = () => {
     defaultValues: {
       amount: "",
     },
+    mode: "onChange",
   });
   const { toast } = useToast();
   const [txId, setTxId] = useState(null);
