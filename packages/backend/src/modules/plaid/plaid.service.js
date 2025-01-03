@@ -58,17 +58,32 @@ export class PlaidService {
       }
 
       const accountId = await this.getUserAccountId(userId);
-
       const formattedAmount = amount.toFixed(2);
 
-      const authResponse = await this.plaidClient.transferCreate({
+      // First create a transfer authorization
+      const authorizationResponse =
+        await this.plaidClient.transferAuthorizationCreate({
+          access_token: user.plaidAccessToken,
+          account_id: accountId,
+          amount: formattedAmount,
+          ach_class: 'ppd',
+          user: {
+            legal_name: user.name,
+          },
+          network: 'ach',
+          type: 'debit',
+        });
+
+      // Then create the transfer using the authorization_id
+      const transferResponse = await this.plaidClient.transferCreate({
         access_token: user.plaidAccessToken,
         account_id: accountId,
+        authorization_id: authorizationResponse.data.authorization.id,
         amount: formattedAmount,
         description: 'Buy BTC',
       });
 
-      return authResponse?.data?.transfer?.id;
+      return transferResponse?.data?.transfer?.id;
     } catch (error) {
       throw new Error(
         error.response?.data?.error_message || 'Failed to process payment',

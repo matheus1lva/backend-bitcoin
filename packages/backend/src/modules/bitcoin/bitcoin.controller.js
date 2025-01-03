@@ -42,6 +42,7 @@ export class BitcoinController {
         price: btcPrice,
       });
     } catch (error) {
+      console.log(error);
       logger.error(error);
       res
         .status(500)

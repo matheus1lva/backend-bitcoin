@@ -84,7 +84,10 @@ export class PasskeyController {
         res.json({
           verified: true,
           token: verification.token,
-          user: verification.user,
+          user: {
+            ...verification.user,
+            hasLinkedBankAccount: verification.user.plaidItemId !== null,
+          },
         });
       } else {
         res.json({ verified: false });

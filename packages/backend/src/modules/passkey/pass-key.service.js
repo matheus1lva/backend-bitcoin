@@ -149,11 +149,10 @@ class PasskeyService {
         credential.id,
         authenticationInfo.newCounter.toString(),
       );
-
       return {
         verified: true,
         token: this.jwtService.sign({ id: user.id }),
-        user,
+        user: { ...user, hasLinkedBankAccount: user.plaidItemId !== null },
       };
     } catch (error) {
       logger.error('Authentication verification failed:', error);

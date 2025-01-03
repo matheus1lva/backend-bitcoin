@@ -10,36 +10,45 @@ const customFormat = printf(({ level, message, timestamp, ...keys }) => {
   return `${timestamp} [${level}]: ${message}${keysString}`;
 });
 
-const PRODUCTION_TRANSPORTS = [
-  new winston.transports.Console(),
-  new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-  new winston.transports.File({ filename: 'logs/combined.log' }),
-];
+const getTransports = () => {
+  if (isDev) {
+    return [
+      new winston.transports.Console({
+        level: 'http',
+        format: combine(
+          timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+          colorize(),
+          customFormat,
+        ),
+      }),
+    ];
+  }
+
+  return [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+  ];
+};
+
+const getExceptionHandlers = () => {
+  if (isDev) {
+    return [new winston.transports.File({ filename: 'logs/exceptions.log' })];
+  }
+  return [];
+};
+
+const getRejectionHandlers = () => {
+  if (isDev) {
+    return [new winston.transports.File({ filename: 'logs/rejections.log' })];
+  }
+  return [];
+};
 
 export const logger = winston.createLogger({
   levels: winston.config.npm.levels,
   format: winston.format.json(),
-  transports: PRODUCTION_TRANSPORTS,
-  exceptionHandlers: isDev && [
-    new winston.transports.File({ filename: 'logs/exceptions.log' }),
-  ],
-  rejectionHandlers: isDev && [
-    new winston.transports.File({ filename: 'logs/rejections.log' }),
-  ],
+  transports: getTransports(),
+  exceptionHandlers: getExceptionHandlers(),
+  rejectionHandlers: getRejectionHandlers(),
 });
-
-if (isDev) {
-  for (const transport of PRODUCTION_TRANSPORTS) {
-    logger.remove(transport);
-  }
-  logger.add(
-    new winston.transports.Console({
-      level: 'http',
-      format: combine(
-        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        colorize(),
-        customFormat,
-      ),
-    }),
-  );
-}

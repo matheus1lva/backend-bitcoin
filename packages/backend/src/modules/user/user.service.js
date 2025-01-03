@@ -61,12 +61,15 @@ export class UserService {
 
     const { password, ...userWithoutPassword } = user;
     return {
-      user: userWithoutPassword,
-      token: this.jwtService.sign(userWithoutPassword),
+      user: { ...userWithoutPassword },
     };
   }
 
   async login(email, inputPassword) {
+    if (!email || !inputPassword) {
+      throw new Error('Email and password are required');
+    }
+
     const user = await this.userRepository.findByEmail(email);
 
     if (!user) {
@@ -81,8 +84,16 @@ export class UserService {
 
     const { password, ...userWithoutPassword } = user;
 
-    const token = this.jwtService.sign(userWithoutPassword);
+    const token = this.jwtService.sign({
+      id: userWithoutPassword.id,
+      email: userWithoutPassword.email,
+      hasLinkedBankAccount: userWithoutPassword.plaidItemId !== null,
+    });
 
-    return { user: userWithoutPassword, token };
+    return {
+      user: userWithoutPassword,
+      token,
+      expiresIn: '24h',
+    };
   }
 }
