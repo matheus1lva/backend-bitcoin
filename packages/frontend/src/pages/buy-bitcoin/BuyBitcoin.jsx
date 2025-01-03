@@ -113,14 +113,12 @@ export const BuyBitcoin = () => {
           </div>
         )}
 
-        {balanceData?.balance !== undefined && (
-          <div className="space-y-1">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Bitcoin Balance
-            </h4>
-            <p className="text-2xl font-bold">{balanceData.balance} BTC</p>
-          </div>
-        )}
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium text-muted-foreground">
+            Bitcoin Balance
+          </h4>
+          <p className="text-2xl font-bold">{balanceData?.balance ?? 0} BTC</p>
+        </div>
 
         {bankBalance && (
           <div className="space-y-1">

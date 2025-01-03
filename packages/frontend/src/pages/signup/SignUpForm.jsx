@@ -112,7 +112,7 @@ const SignUpForm = () => {
         await exchangePublicToken(userData.id, public_token);
         const response = await apiClient.post("/v1/users/login", {
           email: userData.email,
-          password: userData.password,
+          password: form.getValues("password"),
         });
         const { user, token } = response.data;
         updateUser(user, token);

@@ -86,12 +86,13 @@ export class UserService {
 
     const token = this.jwtService.sign({
       id: userWithoutPassword.id,
-      email: userWithoutPassword.email,
-      hasLinkedBankAccount: userWithoutPassword.plaidItemId !== null,
     });
 
     return {
-      user: userWithoutPassword,
+      user: {
+        ...userWithoutPassword,
+        hasLinkedBankAccount: userWithoutPassword.plaidItemId !== null,
+      },
       token,
       expiresIn: '24h',
     };
